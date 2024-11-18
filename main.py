@@ -1,14 +1,12 @@
 import streamlit as st
-import json
 from google.oauth2 import service_account
 from google.cloud import firestore
 from datetime import datetime
 import uuid
 
-# Load the Firestore key from Streamlit secrets
-key_dict = json.loads(st.secrets["textkey"])
-creds = service_account.Credentials.from_service_account_info(key_dict)
-db = firestore.Client(credentials=creds, project="todo-app")
+# Use secrets directly without json.loads
+credentials = service_account.Credentials.from_service_account_info(st.secrets["textkey"])
+db = firestore.Client(credentials=credentials, project="todo-app-9fc2d")
 
 st.title("Todo App ")
 
