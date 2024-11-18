@@ -18,7 +18,7 @@ if task and submit:
     doc_ref.set({"task": task})
 
 # And then render each task
-tasks_ref = db.collection("tasks")
+tasks_ref = db.collection("to-dos")
 for doc in tasks_ref.stream():
     task = doc.to_dict()["task"]
 
