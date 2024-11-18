@@ -1,75 +1,45 @@
+# main.py
 import streamlit as st
 from google.oauth2 import service_account
 from google.cloud import firestore
 from datetime import datetime
 import uuid
+from login import show_login_page
 
-# Use secrets directly without json.loads
+# Initialize Firestore
 credentials = service_account.Credentials.from_service_account_info(st.secrets["textkey"])
 db = firestore.Client(credentials=credentials, project="todo-app-9fc2d")
 
-st.title("Todo App ")
+st.title("Todo App")
 
-# Streamlit widgets for task creation
-col1, col2 = st.columns([3, 1])
-with col1:
-    task = st.text_input("Task")
-with col2:
-    due_date = st.date_input("Due Date")
-
-submit = st.button("Add Task")
-
-# Add task to database
-if task and submit:
-    task_id = str(uuid.uuid4())
-    doc_ref = db.collection("tasks").document(task_id)
-    doc_ref.set({
-        "task": task,
-        "due_date": due_date.strftime("%Y-%m-%d"),
-        "completed": False,
-        "created_at": datetime.now().strftime("%Y-%m-%d")
-    })
-
-# Display tasks grouped by due date
-st.subheader("📅 Tasks by Due Date")
-tasks_ref = db.collection("tasks").order_by("due_date")
-
-for doc in tasks_ref.stream():
-    data = doc.to_dict()
-    task_id = doc.id
-    
-    col1, col2, col3 = st.columns([3, 1, 1])
-    
+if 'user_info' not in st.session_state:
+    show_login_page()
+else:
+    col1, col2 = st.columns([3, 1])
     with col1:
-        # Checkbox for task completion
-        completed = st.checkbox(
-            data["task"], 
-            value=data["completed"], 
-            key=task_id
-        )
-        if completed != data["completed"]:
-            db.collection("tasks").document(task_id).update({"completed": completed})
-    
+        task = st.text_input("Task")
     with col2:
-        st.write(f"Due: {data['due_date']}")
-    
-    with col3:
-        if st.button("🗑️", key=f"delete_{task_id}"):
-            db.collection("tasks").document(task_id).delete()
-            st.experimental_rerun()
+        due_date = st.date_input("Due Date")
 
-# Add calendar view
-st.subheader("📅 Calendar View")
-tasks_by_date = {}
-for doc in tasks_ref.stream():
-    data = doc.to_dict()
-    date = data["due_date"]
-    if date in tasks_by_date:
-        tasks_by_date[date].append(data["task"])
-    else:
-        tasks_by_date[date] = [data["task"]]
+    submit = st.button("Add Task")
 
-for date, tasks in tasks_by_date.items():
-    st.write(f"**{date}**")
-    for task in tasks:
-        st.write(f"- {task}")
+    if task and submit:
+        task_id = str(uuid.uuid4())
+        doc_ref = db.collection("tasks").document(task_id)
+        doc_ref.set({
+            "user_id": st.session_state.user_info['localId'],
+            "task": task,
+            "due_date": due_date.strftime("%Y-%m-%d"),
+            "completed": False
+        })
+
+    tasks_ref = db.collection("tasks").where("user_id", "==", st.session_state.user_info['localId'])
+    for doc in tasks_ref.stream():
+        data = doc.to_dict()
+        st.write(f"Task: {data['task']} - Due: {data['due_date']}")
+
+    if st.button("Sign Out"):
+        from auth import Authentication
+        auth = Authentication()
+        auth.sign_out()
+        st.rerun()

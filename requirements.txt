@@ -2,3 +2,6 @@ streamlit
 google-cloud-firestore
 gcsfs
 st-files-connection
+firebase
+pyrebase4 
+firebase-admin
